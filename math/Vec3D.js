@@ -1,5 +1,7 @@
 define ( function ( require, exports, module ) {
     
+    var serialize = require ( '../oop/oop').serialize;
+    
     function Vec3D ( x, y, z ) {
         if ( arguments.length === 1 ) {
             this.x = x.x || 0;
@@ -228,6 +230,10 @@ define ( function ( require, exports, module ) {
                 this.y = this.y - y;
                 this.z = this.z - z;
             }
+        };
+        
+        proto.toString =    function toString () {
+            return serialize ( this );
         };
         
     } ) ( Vec3D.prototype );
