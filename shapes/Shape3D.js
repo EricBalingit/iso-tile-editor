@@ -5,7 +5,8 @@ define ( function ( require, exports, module ) {
         Vec3D = math.Vec3D,
         Rotation = math.Rotation,
         bezierPoint = math.bezierPoint,
-        quadraticPoint = math.quadraticPoint;
+        quadraticPoint = math.quadraticPoint,
+        serialize = require ( '../oop/oop' ).serialize;
     
     /**
      * Interactive 3D planar shapes require 3 different representations
@@ -35,7 +36,7 @@ define ( function ( require, exports, module ) {
         
         var p = new Vec3D (), v = new Vec3D (), q = new Rotation (), r = new Rotation ();
         
-        proto.update = function ( camera ) {
+        proto.update = function update ( camera ) {
             
             var scale = this.shape2D.scale, rotation = this.rotation,
                 segments = this.segments, clip = this.clip,
@@ -121,7 +122,7 @@ define ( function ( require, exports, module ) {
             }
         };
     
-        proto.render = function ( ctx ) {
+        proto.render = function render ( ctx ) {
             var segments = this.segments, shape = this.shape,
                 seg, i, l = segments.length, t = 2, s,
                 shape2D = this.shape2D, stroke = false, fill = false;
@@ -170,6 +171,11 @@ define ( function ( require, exports, module ) {
                 
             ctx.restore ();
         };
+        
+        proto.toString = function toString () {
+            serialize ( this );
+        };
+        
     } ) ( Shape3D.prototype );
     
 } );
