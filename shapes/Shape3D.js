@@ -44,8 +44,10 @@ define ( function ( require, exports, module ) {
                 shape2D = this.shape2D, stroke = false, fill = false;
             
             ctx.save ();
-                if ( shape2D.stroke ) {
+                
+                if ( shape2D.strokeweight && shape2D.stroke ) {
                     ctx.strokeStyle = rgba ( shape2D.stroke );
+                    ctx.lineWidth = shape2D.strokeweight;
                     stroke = true;
                 }
                 
