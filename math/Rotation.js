@@ -192,6 +192,41 @@ define ( function ( require, exports, module ) {
             );
         };
         
+        proto.putMultEuler = function ( x, y, z, reversed, q2 ) {
+            
+            x = x * 0.5;
+            y = y * 0.5;
+            z = z * 0.5;
+            
+            var cx = Math.cos ( x ), sx = Math.sin ( x ),
+                cy = Math.cos ( y ), sy = Math.sin ( y ),
+                cz = Math.cos ( z ), sz = Math.sin ( z ),
+                t = q2 || this,
+                w = this.w,
+                qw, qx, qy, qz;
+            
+            x = this.x; y = this.y; z = this.z;
+            
+            if ( reversed ) {
+                qw = cx * cy * cz + sx * sy * sz;
+                qx = sx * cy * cz - cx * sy * sz;
+                qy = cx * sy * cz + sx * cy * sz;
+                qz = cx * cy * sz - sx * sy * cz;
+            } else {
+                qw = cx * cy * cz - sx * sy * sz;
+                qx = sx * cy * cz + cx * sy * sz;
+                qy = cx * sy * cz - sx * cy * sz;
+                qz = cx * cy * sz + sx * sy * cz;
+            }
+            
+            t.put ( 
+                qw * w -(qx * x + qy * y + qz * z),
+                qw * x + qx * w - qy * z + qz * y,
+                qw * y + qx * z + qy * w - qz * x,
+                qw * z - qx * y + qy * x + qz * w
+            );
+        };
+        
         /**
          * 
          */
@@ -317,6 +352,41 @@ define ( function ( require, exports, module ) {
             var t = q2 || this,
                 w = this.w, x = this.x, y = this.y, z = this.z,
                 qw = q.w, qx = q.x, qy = q.y, qz = q.z;
+            
+            t.set ( 
+                qw * w -(qx * x + qy * y + qz * z),
+                qw * x + qx * w - qy * z + qz * y,
+                qw * y + qx * z + qy * w - qz * x,
+                qw * z - qx * y + qy * x + qz * w
+            );
+        };
+        
+        proto.setMultEuler = function ( x, y, z, reversed, q2 ) {
+            
+            x = x * 0.5;
+            y = y * 0.5;
+            z = z * 0.5;
+            
+            var cx = Math.cos ( x ), sx = Math.sin ( x ),
+                cy = Math.cos ( y ), sy = Math.sin ( y ),
+                cz = Math.cos ( z ), sz = Math.sin ( z ),
+                t = q2 || this,
+                w = this.w,
+                qw, qx, qy, qz;
+            
+            x = this.x; y = this.y; z = this.z;
+            
+            if ( reversed ) {
+                qw = cx * cy * cz + sx * sy * sz;
+                qx = sx * cy * cz - cx * sy * sz;
+                qy = cx * sy * cz + sx * cy * sz;
+                qz = cx * cy * sz - sx * sy * cz;
+            } else {
+                qw = cx * cy * cz - sx * sy * sz;
+                qx = sx * cy * cz + cx * sy * sz;
+                qy = cx * sy * cz - sx * cy * sz;
+                qz = cx * cy * sz + sx * sy * cz;
+            }
             
             t.set ( 
                 qw * w -(qx * x + qy * y + qz * z),

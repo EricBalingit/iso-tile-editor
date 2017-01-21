@@ -4,9 +4,10 @@ define ( function ( require, exports, module ) {
         rgba = math.color.rgba,
         Vec3D = math.Vec3D,
         Rotation = math.Rotation,
-        bezierPoint = math.bezierPoint,
-        quadraticPoint = math.quadraticPoint,
-        serialize = require ( '../oop/oop' ).serialize;
+        cubicPoint = math.bezier.cubicPoint,
+        quadraticPoint = math.bezier.quadraticPoint,
+        serialize = require ( '../oop/oop' ).serialize,
+        Bounds2D = require ( 'Bounds2D' );
     
     /**
      * Interactive 3D planar shapes require 3 different representations
@@ -19,24 +20,66 @@ define ( function ( require, exports, module ) {
      *      3D spline representation, which is nothing more than a flat
      *      array with and extra z = 0 for each point in the 2D path
      */
-    var Shape3D = function ( shape2D, position, rotation ) {
+    var Shape3D = function ( shape2D, position, localEuler, globalEuler ) {
+        
+        if ( this.constructor === Shape3D ) {
+            throw new TypeError ( 'Shape3D is abstract and must be extended by an implementing class' );
+        }
         
         this.shape2D = shape2D;
         this.position = position;
-        this.rotation = rotation;
-        this.localEuler = new Vec3D ( 0, 0, 0 );
-        this.globalEuler = new Vec3D ( 0, 0, 0 );
+        this.localEuler = localEuler;
+        this.globalEuler = globalEuler;
+        this.localRotation = new Rotation ( localEuler.x, localEuler.y, localEuler.z );
+        this.globalRotation = new Rotation ( globalEuler.x, globalEuler.y, globalEuler.z );
+        
+        // copy the global rotation
+        this.rotation = new Rotation ( this.globalRotation );
+        
+        // multiply by the local rotation and compute the rotation matrix
+        this.rotation.setMult ( this.localRotation );
         this.shape = [];
         this.clip = [];
         
         this.localRotationChanged = this.globalRotationChanged = false;
         
         this.update ();
+        
+        this.bounds = this.getBounds ();
     };
     
     ( function ( proto ) {
         
-        var p = new Vec3D (), v = new Vec3D (), q = new Rotation (), r = new Rotation ();
+        var p = new Vec3D (), v = new Vec3D (), r = new Rotation ();
+        
+        // @override
+        proto.segments = [];
+        
+        proto.getBounds = function getBounds () {
+            var s = this.shape ();
+            
+            var top = Infinity, right = -Infinity, bottom = -Infinity, left = Infinity,
+                x, y;
+            
+            for ( var i = 0, l = s.length; i < l; i = i + 2 ) {
+                x = s [ i + 0 ];
+                y = s [ i + 1 ];
+                if ( y < top ) {
+                    top = x;
+                }
+                if ( y > bottom ) {
+                    bottom = y;
+                }
+                if ( x < left ) {
+                    left = x;
+                }
+                if ( x > right ) {
+                    right = x;
+                }
+            }
+            
+            return new Bounds2D ( top, right, bottom, left );
+        };
         
         proto.render = function render ( ctx ) {
             var segments = this.segments, shape = this.shape,
@@ -53,6 +96,7 @@ define ( function ( require, exports, module ) {
                 
                 if ( shape2D.fill ) {
                     ctx.fillStyle = rgba ( shape2D.fill );
+                    fill = true;
                 }
                 
                 ctx.beginPath ();
@@ -91,13 +135,17 @@ define ( function ( require, exports, module ) {
         };
         
         proto.rotateLocalEuler = function rotateLocalEuler ( x, y, z ) {
-            this.localEuler.add.apply ( null, arguments );
-            this.localRotationChanged = true;
+            var euler = this.localEuler, local = this.localRotation;
+            euler.add.apply ( null, arguments );
+            local.setEuler ( euler.x, euler.y, euler.z );
+            this.globalRotation.setMult ( local, this.rotation );
         };
         
         proto.rotateGlobalEuler = function rotateGlobalEuler ( x, y, z ) {
-            this.globalEuler.add.apply ( null, arguments );
-            this.globalRotationChanged = true;
+            var euler = this.globaEuler, global = this.globalRotation;
+            euler.add.apply ( null, arguments );
+            global.setEuler ( euler.x, euler.y, euler.z );
+            global.setMult ( this.localRotation, this.rotation );
         };
         
         proto.toString = function toString () {
@@ -106,13 +154,18 @@ define ( function ( require, exports, module ) {
         
         proto.update = function update ( camera ) {
             
+            if ( !this.segments ) {
+                throw new TypeError ( 'Shape3D.prototype.update is abstract and must be wrapped by the inheriting class, e.g. this.segments is undefined or must be managed by the inheriting class' );
+            }
+            
             var scale = this.shape2D.scale, rotation = this.rotation,
-                local = this.localEuler, global = this.globalEuler,
                 segments = this.segments, clip = this.clip,
                 shape = this.shape, position = this.position,
                 l = segments.length, i, j, t, seg,
                 sx = scale.x, sy = scale.y, // scale.z is never used since shapes are planar
-                ax, ay, bx, by, cx, cy, dx, dy, px, py, lx, ly;
+                ax, ay, bx, by, cx, cy, dx, dy, px, py, lx, ly,
+                top = Infinity, right = -Infinity, bottom = -Infinity, left = Infinity,
+                x, y, bounds = this.bounds;
             
             shape.length = 0;
             clip.length = 0;
@@ -121,40 +174,31 @@ define ( function ( require, exports, module ) {
             camera.rotate ( p, v );
             lx = v.x; ly = v.y;
             
-            var newRotation = false;
-            if ( this.localRotationChanged ) {
-                q.putEuler( local.x, local.y, local.z, false );
-                newRotation = true;
-                this.localRotationChanged = false;
-            } else {
-                q.put ( this.localRotation );
-            }
-            if ( this.globalRotationChanged ) {
-                r.putEuler ( global.x, global.y, global.z, false );
-                newRotation = true;
-                this.globalRotationChanged = false;
-            } else {
-                r.put ( this.globalRotation );
-            }
-            if ( newRotation ) {
-                // q * r * camera -> r
-                camera.setMult ( r.putMult ( q, r ), r );
-            } else {
-                // rotation * camera -> r
-                camera.setMult ( rotation, r );
-            }
+            // apply the camera rotation to the current rotation
+            
+            // rotation * camera -> r
+            camera.setMult ( rotation, r );
             
             for ( i = 0; i < l; i = i + 1 ) {
                 
                 seg = segments [ i ];
                 
                 if ( seg.length === 2 ) {
+                    
                     ax = px = seg [ 0 ]; ay = py = seg [ 1 ];
                     p.set ( px, py, 0 );
                     r.rotate ( p, v );
-                    shape.push ( ax = sx * v.x + lx, ay = sy * v.y + ly );
-                    clip.push ( ax, ay );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    clip.push ( x, y );
+                    
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
+                    
                 } else if ( seg.length === 4 ) {
+                    
                     ax = px;        ay = py;
                     bx = seg [ 0 ]; by = seg [ 1 ];
                     cx = seg [ 2 ]; cy = seg [ 3 ];
@@ -162,15 +206,30 @@ define ( function ( require, exports, module ) {
                     
                     p.set ( ax, ay, 0 );
                     r.rotate ( p, v );
-                    shape.push ( ax = sx * v.x + ly, ay = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + ly, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     p.set ( bx, by, 0 );
                     r.rotate ( p, v );
-                    shape.push ( bx = sx * v.x + lx, by = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     p.set ( cx, cy, 0 );
                     r.rotate ( p, v );
-                    shape.push ( cx = sx * v.x + lx, cy = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     for ( j = 0; j <= 16; j = j + 1 ) {
                         t = j / 16;
@@ -181,6 +240,7 @@ define ( function ( require, exports, module ) {
                     }
                     
                 } else {
+                    
                     ax = px;        ay = py;
                     bx = seg [ 0 ]; by = seg [ 1 ];
                     cx = seg [ 2 ]; cy = seg [ 3 ];
@@ -189,30 +249,58 @@ define ( function ( require, exports, module ) {
                     
                     p.set ( ax, ay, 0 );
                     r.rotate ( p, v );
-                    shape.push ( ax = sx * v.x + ly, ay = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + ly, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     p.set ( bx, by, 0 );
                     r.rotate ( p, v );
-                    shape.push ( bx = sx * v.x + lx, by = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     p.set ( cx, cy, 0 );
                     r.rotate ( p, v );
-                    shape.push ( cx = sx * v.x + lx, cy = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     p.set ( dx, dy, 0 );
                     r.rotate ( p, v );
-                    shape.push ( dx = sx * v.x + lx, dy = sy * v.y + ly );
+                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
+                    // update bounds
+                    if ( y < top ) { top = x; }
+                    if ( y > bottom ) { bottom = y; }
+                    if ( x < left ) { left = x; }
+                    if ( x > right ) { right = x; }
                     
                     for ( j = 0; j <= 16; j = j + 1 ) {
                         t = j / 16;
                         clip.push (
-                            bezierPoint ( ax, bx, cx, dx, t ),
-                            bezierPoint ( ay, by, cy, dy, t )
+                            cubicPoint ( ax, bx, cx, dx, t ),
+                            cubicPoint ( ay, by, cy, dy, t )
                         );
                     }
                 }
             }
+            
+            bounds.top = top;
+            bounds.right = right;
+            bounds.bottom = bottom;
+            bounds.left = left;
         };
+        
+        // @override
+        proto.onselect = function onselect ( editor ) {};
         
     } ) ( Shape3D.prototype );
     

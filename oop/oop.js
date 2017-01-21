@@ -22,6 +22,45 @@ define ( function ( require, exports, module ) {
         };
     }
     
+    /**
+     * Prototypes are daisy chained, so we can walk straight up the
+     * prototype._super_._super_ etc. For example AnyClass.prototype._super_
+     * points to the prototype of the super class, whereas normally
+     * AnyClass.prototype._super_ is itself the super class constructor.
+     * Since all prototypes, by requirement, already contain a reference to
+     * their constructor, this makes code clearer and more readable.  For
+     * example constructor chains look like:
+     * 
+     * extend ( AnyClass, OtherClass );
+     * function AnyClass ( args ) {
+     *     AnyClass.prototype._super_.constructor.call ( this, args );
+     * }
+     * 
+     * 
+     * Or method overrides look like:
+     * 
+     * AnyClass.prototype.method = function method ( args ) {
+     *     
+     *     // do other stuff or run a check, then
+     *     
+     *     AnyClass.prototype._super_.method.call ( this, args );
+     * };
+     * 
+     * 
+     * Or if the need arises, for example when method override skips
+     * a generation but the grandparent method is still useful to the
+     * grandchild, one can walk further up the prototype chain in a
+     * straightforward way, i.e. obtaining the superclass of the
+     * superclass, etc.:
+     * 
+     * AnyClass.prototype.method = function method ( args ) {
+     *     
+     *     // do other stuff or run a check, then
+     *     
+     *     AnyClass.prototype._super_._super_.method.call ( this, args );
+     * }
+     * 
+     */
     function extend ( child, parent ) {
         child.prototype = Object.create( parent.prototype );
         
@@ -29,8 +68,8 @@ define ( function ( require, exports, module ) {
             constructor: {
                 value: child
             },
-            _super: {
-                value: parent,
+            _super_: {
+                value: parent.prototype,
             }
         });
         
@@ -132,7 +171,27 @@ define ( function ( require, exports, module ) {
         return '{__class__:"' + info.__class__ + '",__args__:{' + output + '}}';
     }
     
+    function sealedJaggedCopy ( array ) {
+        var copy = [];
+        for ( var i = 0, l = array.length; i < l; i = i + 1 ) {
+            copy.push ( Object.seal ( array [ i ].slice () ) );
+        }
+        
+        return Object.seal ( copy );
+    }
+    
+    function frozenJaggedCopy ( array ) {
+        var copy = [];
+        for ( var i = 0, l = array.length; i < l; i = i + 1 ) {
+            copy.push ( Object.freeze ( array [ i ].slice () ) );
+        }
+        
+        return Object.freeze ( copy );
+    }
+    
     exports.assign = Object.assign;
     exports.extend = extend;
+    exports.sealedJaggedCopy = sealedJaggedCopy;
+    exports.frozenJaggedCopy = frozenJaggedCopy;
     exports.serialize = serialize;
 } );

@@ -1,6 +1,6 @@
 define ( function ( require, exports, module ) {
     
-    var serialize = require ( '../oop/opp').serialize;
+    var serialize = require ( '../oop/opp' ).serialize;
     
     function Shape2D ( stroke, fill, strokeweight, scale, segments ) {
         this.stroke = stroke;
