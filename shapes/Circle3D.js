@@ -2,7 +2,6 @@ define ( function ( require, exports, module ) {
     
     var oop = require ( '../oop/opp' ),
         extend = oop.extend,
-        sealedJaggedCopy = oop.sealedJaggedCopy,
         frozenJaggedCopy = oop.frozenJaggedCopy,
         Shape2D = require ( 'Shape2D' ),
         Shape3D = require ( 'Shape3D' ),
