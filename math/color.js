@@ -1,5 +1,8 @@
 define ( function ( require, exports, module ) {
     
+    exports.color = rgba;
+    exports.hsla = hsla;
+    
     function rgba ( r, g, b, a ) {
         var l = arguments.length;
         
@@ -28,8 +31,5 @@ define ( function ( require, exports, module ) {
             return 'hsla(' + h + ',' + s + '%,' + l + '%,' + a + ')';
         }
     }
-    
-    module.exports.color = rgba;
-    module.exports.hsla = hsla;
     
 } );

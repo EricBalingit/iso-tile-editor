@@ -6,13 +6,14 @@ define ( function ( require, exports, module ) {
         frozenJaggedCopy = arrays.frozenJaggedCopy,
         Shape3D = require ( 'Shape3D' );
     
+    
+    module.exports = Square3D;
+    
     extend ( Square3D, Shape3D );
     
     function Square3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler ) {
         
-        arguments.length = arguments.length + 1;
-        
-        arguments [ arguments.length - 1 ] = frozenJaggedCopy ( this.segments );
+        Array.prototype.push.call ( arguments, frozenJaggedCopy ( this.segments ) );
         
         Square3D.prototype._super_.constructor.call ( this, arguments );
     }
@@ -31,7 +32,5 @@ define ( function ( require, exports, module ) {
         ] );
         
     } ) ( Square3D.prototype );
-    
-    module.exports = Square3D;
     
 } );

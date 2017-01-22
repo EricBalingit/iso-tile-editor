@@ -1,5 +1,7 @@
 define ( function ( require, exports, module ) {
     
+    module.exports = Bounds2D;
+    
     /**
      * Bounds2D represents a rectangular region of the viewing
      * plane.  In screen coordinates, top is the top of the boundary,
@@ -62,5 +64,4 @@ define ( function ( require, exports, module ) {
         );
     }
     
-    module.exports = Bounds2D;
 } );

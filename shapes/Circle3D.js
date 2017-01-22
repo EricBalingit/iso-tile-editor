@@ -6,14 +6,17 @@ define ( function ( require, exports, module ) {
         Shape3D = require ( 'Shape3D' ),
         K = require ( '../math/bezier' ).K * 0.5;
     
+    
+    module.exports = Circle3D;
+    
     extend ( Circle3D, Shape3D );
     
     function Circle3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, radius ) {
         
-        // this shape is immutable
-        this.radius = radius;
+        // not required but safe
+        this.radius = Array.prototype.pop.call ( arguments );
         
-        arguments [ arguments.length - 1 ] = frozenJaggedCopy ( this.segments );
+        Array.prototype.push.call ( arguments, frozenJaggedCopy ( this.segments ) );
         
         Circle3D.prototype._super_.constructor.call ( this, arguments );
     }
@@ -32,7 +35,5 @@ define ( function ( require, exports, module ) {
         ] );
         
     } ) ( Circle3D.prototype );
-    
-    module.exports = Circle3D;
     
 } );

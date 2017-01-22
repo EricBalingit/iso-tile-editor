@@ -1,5 +1,8 @@
 define ( function ( require, exports, module ) {
     
+    exports.frozenJaggedCopy = frozenJaggedCopy;
+    exports.sealedJaggedCopy = sealedJaggedCopy;
+    
     function sealedJaggedCopy ( array ) {
         var copy = [];
         for ( var i = 0, l = array.length; i < l; i = i + 1 ) {
@@ -17,8 +20,5 @@ define ( function ( require, exports, module ) {
         
         return Object.freeze ( copy );
     }
-    
-    exports.frozenJaggedCopy = frozenJaggedCopy;
-    exports.sealedJaggedCopy = sealedJaggedCopy;
     
 } );

@@ -4,16 +4,20 @@ define ( function ( require, exports, module ) {
         arrays = require ( '../oop/arrays' ),
         frozenJaggedCopy = arrays.frozenJaggedCopy,
         sealedJaggedCopy = arrays.sealedJaggedCopy,
-        Shape3D = require ( 'Shape3D' );
+        Shape3D = require ( 'Shape3D' ),
+        Vec3D = require ( '../math/Vec3D' );
+    
+    
+    module.exports = Rectangle3D;
     
     extend ( Rectangle3D, Shape3D );
     
     function Rectangle3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, radius ) {
         
         // required by @overrides Shape3D.prototype.update called from Shape3D constructor
-        this.radius = radius;
+        this.radius = Array.prototype.pop.call ( arguments );
         
-        arguments [ arguments.length - 1 ] = sealedJaggedCopy ( this.segments );
+        Array.prototype.push.call ( arguments, sealedJaggedCopy ( this.segments ) );
         
         Rectangle3D.prototype._super_.constructor.apply ( this, arguments );
     }
@@ -118,7 +122,5 @@ define ( function ( require, exports, module ) {
         };
         
     } ) ( Rectangle3D.prototype );
-    
-    module.exports = Rectangle3D;
     
 } );

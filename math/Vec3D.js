@@ -2,7 +2,7 @@ define ( function ( require, exports, module ) {
     
     var serialize = require ( '../oop/oop').serialize;
     
-    exports.Vec3D = Vec3D;
+    module.exports = Vec3D;
     
     function Vec3D ( x, y, z ) {
         if ( arguments.length === 1 ) {

@@ -2,6 +2,12 @@ define ( function ( require, exports, module ) {
     
     var shapes = require ( 'shapes' );
     
+    
+    exports.Shape = {
+        serialize: serialize,
+        deserialize: deserialize
+    };
+    
     // Inspects and object.  If it is a plain object, a string representing that is returned.
     // If it is an array, a string representing the array is returned.
     // If it is any other kind of object, an object is returned with the properties
@@ -130,10 +136,5 @@ define ( function ( require, exports, module ) {
             return obj;
         }
     }
-    
-    exports.Shape = {
-        serialize: serialize,
-        deserialize: deserialize
-    };
     
 } );

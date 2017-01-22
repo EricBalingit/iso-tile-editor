@@ -1,5 +1,11 @@
 define ( function ( require, exports, module ) {
     
+    exports.cubicPoint = cubicPoint;
+    exports.quadraticPoint = quadraticPoint;
+    
+    // circular arc parameter
+    exports.K = 0.551915024494;
+    
     function cubicPoint ( a, b, c, d, t ) {
         var x = b - a, y = b - c, z = t * t, w = x + x, v = y + y;
         
@@ -11,11 +17,5 @@ define ( function ( require, exports, module ) {
         
         return ( c - x - b ) * t * t + ( x + x ) * t + a;
     }
-    
-    exports.cubicPoint = cubicPoint;
-    exports.quadraticPoint = quadraticPoint;
-    
-    // circular arc parameter
-    exports.K = 0.551915024494;
     
 } );

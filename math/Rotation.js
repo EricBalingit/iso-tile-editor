@@ -3,7 +3,7 @@ define ( function ( require, exports, module ) {
     var Vec3D = require ( 'Vec3D' ),
         serialize = require ( '../oop/oop' ).serialize;
     
-    exports.Rotation = Rotation;
+    module.exports = Rotation;
     
     /**
      * @syntax  new Rotation ( w, x, y, z ) - creates a new quaternion rotation
@@ -233,21 +233,23 @@ define ( function ( require, exports, module ) {
          * 
          */
         proto.rotate = function ( x, y, z ) {
-            var l = arguments.length;
+            var l = arguments.length, q, r;
             
             if ( l === 3 ) {
                 p.set ( x, y, z );
+                q = p;
+                r = p.get ();
+            } else if ( l === 2 ) {
+                q = x;
+                r = y;
             } else {
-                p.set ( x );
+                q = x;
+                r = p.get ();
             }
             
-            p.set ( p.dot ( this.mx ), p.dot ( this.my ), p.dot ( this.mz ) );
+            r.set ( q.dot ( this.mx ), q.dot ( this.my ), q.dot ( this.mz ) );
             
-            if ( l === 2 ) {
-                y.set ( p );
-            } else {
-                return new Vec3D ( p.x, p.y, p.z );
-            }
+            return r;
         };
 
         /**

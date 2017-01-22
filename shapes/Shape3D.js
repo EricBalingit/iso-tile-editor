@@ -6,9 +6,12 @@ define ( function ( require, exports, module ) {
         Rotation = math.Rotation,
         cubicPoint = math.bezier.cubicPoint,
         quadraticPoint = math.bezier.quadraticPoint,
-        sealedJaggedCopy = require ( '../oop/arrays' ).sealedJaggedCopy,
         Bounds2D = require ( 'Bounds2D' ),
+        Bounds3D = require ( 'Bounds3D' ),
         Shape2D = require ( 'Shape2D' );
+    
+    
+    module.exports = Shape3D;
     
     var Shape3D = function ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, segments ) {
         
@@ -31,9 +34,17 @@ define ( function ( require, exports, module ) {
         this.clip = [];
         this.localRotationChanged = this.globalRotationChanged = false;
         
-        this.update ();
+        if ( !this.controls ) {
+            this.controls = [];
+        }
         
-        this.bounds = this.getBounds ();
+        this.controls.push ( this.top.get (), this.right.get (), this.bottom.get (), this.left.get () );
+        
+        this.screenBounds = new Bounds2D ();
+        
+        this.controlBounds = new Bounds3D ();
+        
+        this.update ();
     };
     
     ( function ( proto ) {
@@ -44,7 +55,7 @@ define ( function ( require, exports, module ) {
         proto.segments = [];
         
         proto.getBounds = function getBounds () {
-            var s = this.shape ();
+            var s = this.shape;
             
             var top = Infinity, right = -Infinity, bottom = -Infinity, left = Infinity,
                 x, y;
@@ -145,7 +156,8 @@ define ( function ( require, exports, module ) {
                 sx = scale.x, sy = scale.y, // scale.z is never used since shapes are planar
                 ax, ay, bx, by, cx, cy, dx, dy, px, py, lx, ly,
                 top = Infinity, right = -Infinity, bottom = -Infinity, left = Infinity,
-                x, y, bounds = this.bounds;
+                x, y, bounds = this.screenBounds, control = this.controlBounds,
+                controls = this.controls;
             
             shape.length = 0;
             clip.length = 0;
@@ -273,10 +285,30 @@ define ( function ( require, exports, module ) {
                 }
             }
             
+            // update the screen bounds
             bounds.top = top;
             bounds.right = right;
             bounds.bottom = bottom;
             bounds.left = left;
+            
+            // now update the standard control rigging
+            for ( i = 0, l = controls.length; i < l; i + i + 1 ) {
+                p.set ( controls [ i ] );
+                rotation.rotate ( p, p );
+                p.add ( position );
+                controls [ i ].set ( p );
+            }
+                
+            
+            top.set     ( 0,            0.5 * sy,           0 );
+            right.set   ( 0.5 * sx,     0,                  0 );
+            bottom.set  ( 0,            -0.5 * sy,          0 );
+            left.set    ( -0.5 * sx,    0,                  0 );
+            
+            rotation.rotate ( top, top );
+            rotation.rotate ( right, right );
+            rotation.rotate ( bottom, bottom );
+            rotation.rotate ( left, left );
         };
         
         // @mustoverride
