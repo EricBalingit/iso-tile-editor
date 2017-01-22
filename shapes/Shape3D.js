@@ -38,8 +38,6 @@ define ( function ( require, exports, module ) {
             this.controls = [];
         }
         
-        this.controls.push ( this.top.get (), this.right.get (), this.bottom.get (), this.left.get () );
-        
         this.screenBounds = new Bounds2D ();
         
         this.controlBounds = new Bounds3D ();
@@ -291,19 +289,15 @@ define ( function ( require, exports, module ) {
             bounds.bottom = bottom;
             bounds.left = left;
             
-            // now update the standard control rigging
-            for ( i = 0, l = controls.length; i < l; i + i + 1 ) {
-                p.set ( controls [ i ] );
-                rotation.rotate ( p, p );
-                p.add ( position );
-                controls [ i ].set ( p );
-            }
-                
+            top = control.top;
+            right = control.right;
+            bottom = control.bottom;
+            left = control.left;
             
-            top.set     ( 0,            0.5 * sy,           0 );
-            right.set   ( 0.5 * sx,     0,                  0 );
-            bottom.set  ( 0,            -0.5 * sy,          0 );
-            left.set    ( -0.5 * sx,    0,                  0 );
+            top.set     ( 0,            0.5 * sy,       0 );
+            right.set   ( 0.5 * sx,     0,              0 );
+            bottom.set  ( 0,            -0.5 * sy,      0 );
+            left.set    ( -0.5 * sx,    0,              0 );
             
             rotation.rotate ( top, top );
             rotation.rotate ( right, right );

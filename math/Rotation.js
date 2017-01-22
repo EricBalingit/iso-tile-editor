@@ -40,11 +40,17 @@ define ( function ( require, exports, module ) {
             this.mx = w.mx.get ();
             this.my = w.my.get ();
             this.mz = w.mz.get ();
+            this.nx = w.nx.get ();
+            this.ny = w.ny.get ();
+            this.nz = w.nz.get ();
             this.put ( w );
         } else {
             this.mx = new Vec3D ();
             this.my = new Vec3D ();
             this.mz = new Vec3D ();
+            this.nx = new Vec3D ();
+            this.ny = new Vec3D ();
+            this.nz = new Vec3D ();
             if ( l === 4 ) {
                 this.set ( w, x, y, z );
             } else if ( l === 3 ) {
@@ -65,7 +71,8 @@ define ( function ( require, exports, module ) {
          * 
          */
         proto.computeMatrix = function () {
-            var w = this.w, x = this.x, y = this.y, z = this.z,
+            var mx = this.mx, my = this.my, mz = this.mz,
+                w = this.w, x = this.x, y = this.y, z = this.z,
                 ww = w * w, wx = w * x, wy = w * y, wz = w * z,
                 xx = x * x, xy = x * y, xz = x * z,
                 yy = y * y, yz = y * z,
@@ -74,9 +81,17 @@ define ( function ( require, exports, module ) {
             wx = wx + wx;   wy = wy + wy;   wz = wz + wz;
             xy = xy + xy;   xz = xz + xz;   yz = yz + yz;
             
-            this.mx.set ( ww+xx-yy-zz,  xy - wz,        wy + xz     );
-            this.my.set ( xy + wz,      ww-xx+yy-zz,    yz - wx     );
-            this.mz.set ( xz - wy,      wx + yz,        ww-xx-yy+zz );
+            mx.set ( ww+xx-yy-zz,  xy - wz,        wy + xz     );
+            my.set ( xy + wz,      ww-xx+yy-zz,    yz - wx     );
+            mz.set ( xz - wy,      wx + yz,        ww-xx-yy+zz );
+            
+            // the orthogonal vectors are already built into the
+            // rotation matrix, this way we can simply borrow them
+            // if we need them
+            this.nx.set ( mx.x, my.x, mz.x );
+            this.ny.set ( mx.y, my.y, mz.y );
+            this.nz.set ( mx.z, my.z, mz.z );
+            
         };
         
         /**
@@ -204,10 +219,8 @@ define ( function ( require, exports, module ) {
                 cy = Math.cos ( y ), sy = Math.sin ( y ),
                 cz = Math.cos ( z ), sz = Math.sin ( z ),
                 t = q2 || this,
-                w = this.w,
+                w,
                 qw, qx, qy, qz;
-            
-            x = this.x; y = this.y; z = this.z;
             
             if ( reversed ) {
                 qw = cx * cy * cz + sx * sy * sz;
@@ -220,6 +233,11 @@ define ( function ( require, exports, module ) {
                 qy = cx * sy * cz - sx * cy * sz;
                 qz = cx * cy * sz + sx * sy * cz;
             }
+            
+            w = this.w;
+            x = this.x;
+            y = this.y;
+            z = this.z;
             
             t.put ( 
                 qw * w -(qx * x + qy * y + qz * z),
@@ -375,10 +393,8 @@ define ( function ( require, exports, module ) {
                 cy = Math.cos ( y ), sy = Math.sin ( y ),
                 cz = Math.cos ( z ), sz = Math.sin ( z ),
                 t = q2 || this,
-                w = this.w,
+                w,
                 qw, qx, qy, qz;
-            
-            x = this.x; y = this.y; z = this.z;
             
             if ( reversed ) {
                 qw = cx * cy * cz + sx * sy * sz;
@@ -391,6 +407,11 @@ define ( function ( require, exports, module ) {
                 qy = cx * sy * cz - sx * cy * sz;
                 qz = cx * cy * sz + sx * sy * cz;
             }
+            
+            w = this.w;
+            x = this.x;
+            y = this.y;
+            z = this.z;
             
             t.set ( 
                 qw * w -(qx * x + qy * y + qz * z),
