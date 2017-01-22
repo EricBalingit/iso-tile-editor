@@ -1,32 +1,22 @@
 define ( function ( require, exports, module ) {
     
-    var math = require ( '../math/*'),
+    var math = require ( '../math/math'),
         rgba = math.color.rgba,
         Vec3D = math.Vec3D,
         Rotation = math.Rotation,
         cubicPoint = math.bezier.cubicPoint,
         quadraticPoint = math.bezier.quadraticPoint,
-        serialize = require ( '../oop/oop' ).serialize,
-        Bounds2D = require ( 'Bounds2D' );
+        sealedJaggedCopy = require ( '../oop/arrays' ).sealedJaggedCopy,
+        Bounds2D = require ( 'Bounds2D' ),
+        Shape2D = require ( 'Shape2D' );
     
-    /**
-     * Interactive 3D planar shapes require 3 different representations
-     * of their data:
-     *  1.  a 2D path because that's how they are defined ( shape2D.segments )
-     *  2.  a 3D spline which carries a 2D projection of the shape
-     *      for clipping so we can interact by where the shape exists
-     *      on the screen
-     *  3.  a 3D path because that's what we transform to generate the
-     *      3D spline representation, which is nothing more than a flat
-     *      array with and extra z = 0 for each point in the 2D path
-     */
-    var Shape3D = function ( shape2D, position, localEuler, globalEuler ) {
+    var Shape3D = function ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, segments ) {
         
         if ( this.constructor === Shape3D ) {
             throw new TypeError ( 'Shape3D is abstract and must be extended by an implementing class' );
         }
         
-        this.shape2D = shape2D;
+        this.shape2D = new Shape2D ( stroke, fill, strokeweight, scale, segments );
         this.position = position;
         this.localEuler = localEuler;
         this.globalEuler = globalEuler;
@@ -35,12 +25,10 @@ define ( function ( require, exports, module ) {
         
         // copy the global rotation
         this.rotation = new Rotation ( this.globalRotation );
-        
         // multiply by the local rotation and compute the rotation matrix
         this.rotation.setMult ( this.localRotation );
         this.shape = [];
         this.clip = [];
-        
         this.localRotationChanged = this.globalRotationChanged = false;
         
         this.update ();
@@ -148,18 +136,10 @@ define ( function ( require, exports, module ) {
             global.setMult ( this.localRotation, this.rotation );
         };
         
-        proto.toString = function toString () {
-            serialize ( this );
-        };
-        
         proto.update = function update ( camera ) {
             
-            if ( !this.segments ) {
-                throw new TypeError ( 'Shape3D.prototype.update is abstract and must be wrapped by the inheriting class, e.g. this.segments is undefined or must be managed by the inheriting class' );
-            }
-            
-            var scale = this.shape2D.scale, rotation = this.rotation,
-                segments = this.segments, clip = this.clip,
+            var shape2D = this.shape2D, scale = shape2D.scale, segments = shape2D.segments,
+                rotation = this.rotation, clip = this.clip,
                 shape = this.shape, position = this.position,
                 l = segments.length, i, j, t, seg,
                 sx = scale.x, sy = scale.y, // scale.z is never used since shapes are planar
@@ -299,7 +279,7 @@ define ( function ( require, exports, module ) {
             bounds.left = left;
         };
         
-        // @override
+        // @mustoverride
         proto.onselect = function onselect ( editor ) {};
         
     } ) ( Shape3D.prototype );

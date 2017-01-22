@@ -3,6 +3,8 @@ define ( function ( require, exports, module ) {
     var Vec3D = require ( 'Vec3D' ),
         serialize = require ( '../oop/oop' ).serialize;
     
+    exports.Rotation = Rotation;
+    
     /**
      * @syntax  new Rotation ( w, x, y, z ) - creates a new quaternion rotation
      *          from w, x, y, and z components
@@ -411,7 +413,5 @@ define ( function ( require, exports, module ) {
         };
     
     } ) ( Rotation.prototype );
-    
-    module.exports = Rotation;
 
 } );

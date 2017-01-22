@@ -80,118 +80,23 @@ define ( function ( require, exports, module ) {
         }
     }
     
-    // Inspects and object.  If it is a plain object, a string representing that is returned.
-    // If it is an array, a string representing the array is returned.
-    // If it is any other kind of object, an object is returned with the properties
-    // __class__ the name of the constructor
-    // __args__ and object whose properties match the parameters to the constructor
-    //          and whose values are null
-    function inspect ( obj ) {
-        if ( 'object' !== typeof obj ) {
-            throw new TypeError ( 'cannot classify object unless it is of type "object"' );
-        }
+    function implement ( obj, methods ) {
         
-        var i, l, name = obj.constructor.name, props = [], prop;
+        var target;
         
-        if ( 'Object' === name ) {
-            for ( name in obj ) {
-                prop = obj [ name ];
-                if ( obj.hasOwnProperty( name ) ) {
-                    switch ( typeof prop ) {
-                        case 'string' : props.push ( name + ':"' + prop + '"' ); break;
-                        case 'number' : props.push ( name + ':' + prop ); break;
-                        case 'object' : props.push ( name + serialize ( prop ) ); break;
-                        case 'function' :
-                        default : props.push ( undefined ); break;
-                    }
-                }
-            }
-            
-            return '{' + props + '}';
-        } else if ( 'Array' === name ) {
-            for ( i = 0, l = obj.length; i < l; i = i + 1 ) {
-                prop = obj [ i ];
-                switch ( typeof prop ) {
-                    case 'string' : props.push ( '"' + prop + '"' ); break;
-                    case 'number' : props.push ( prop ); break;
-                    case 'object' : props.push ( serialize ( prop ) ); break;
-                    case 'function' :
-                    default : props.push ( undefined ); break;
-                }
-            }
-            
-            return '[' + props + ']';
+        if ( typeof obj === 'function' ) {
+            target = obj.prototype;
+        } else if ( '_super_' in obj ) {
+            target = obj;
         } else {
-            return {
-                __class__: obj.constructor.name,
-                __args__: ( '' + obj.constructor )
-                    .split ( /(\(.*?\))/ ) [ 1 ]
-                    .split ( ',' )
-                    .map ( String.prototype.trim )
-                    .reduce ( function ( a, b ) { a [ b ] = null; }, {} )
-            };
-        }
-    }
-    
-    function serialize ( obj ) {
-        var i, info = inspect ( obj ), l, output = [], prop, name;
-        
-        if ( 'string' === typeof info ) {
-            return info;
+            target = Object.create ( obj );
         }
         
-        for ( name in info.__args__ ) {
-            
-            if ( obj.hasOwnProperty ( name ) ) {
-                
-                prop = obj [ name ];
-                
-                if ( 'object' === typeof prop ) {
-                    output.push ( name + ':' + serialize ( prop ) );
-                } else if ( 'function' !== typeof prop ) {
-                    if ( Array.isArray ( prop ) ) {
-                        var ary = [];
-                        for ( i = 0, l = prop.length; i < l; i = i + 1 ) {
-                            switch ( typeof prop [ i ] ) {
-                                case 'string' : ary.push ( '"' + prop [ i ] + '"' ); break;
-                                case 'number' : ary.push ( prop [ i ] ); break;
-                                case 'object' : ary.push ( serialize ( prop [ i ] ) ); break;
-                                case 'function' :
-                                default : ary.push ( undefined ); break;
-                            }
-                        }
-                        output.push ( name + ':[' + ary + ']' );
-                    } else {
-                        output.push ( name + ':' + prop );
-                    }
-                }
-            }
-        }
-        
-        return '{__class__:"' + info.__class__ + '",__args__:{' + output + '}}';
-    }
-    
-    function sealedJaggedCopy ( array ) {
-        var copy = [];
-        for ( var i = 0, l = array.length; i < l; i = i + 1 ) {
-            copy.push ( Object.seal ( array [ i ].slice () ) );
-        }
-        
-        return Object.seal ( copy );
-    }
-    
-    function frozenJaggedCopy ( array ) {
-        var copy = [];
-        for ( var i = 0, l = array.length; i < l; i = i + 1 ) {
-            copy.push ( Object.freeze ( array [ i ].slice () ) );
-        }
-        
-        return Object.freeze ( copy );
+        return Object.assign ( target, methods );
     }
     
     exports.assign = Object.assign;
     exports.extend = extend;
-    exports.sealedJaggedCopy = sealedJaggedCopy;
-    exports.frozenJaggedCopy = frozenJaggedCopy;
-    exports.serialize = serialize;
+    exports.implement = implement;
+    
 } );

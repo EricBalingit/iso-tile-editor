@@ -1,37 +1,21 @@
 define ( function ( require, exports, module ) {
     
-    var oop = require ( '../oop/opp' ),
-        extend = oop.extend,
-        serialize = oop.serialize,
-        sealedJaggedCopy = oop.sealedJaggedCopy,
-        frozenJaggedCopy = oop.frozenJaggedCopy,
-        quadraticPoint = require ( '../math/quadraticPoint' ),
-        Shape2D = require ( 'Shape2D' ),
+    var extend = require ( '../oop/opp' ).extend,
+        arrays = require ( '../oop/arrays' ),
+        frozenJaggedCopy = arrays.frozenJaggedCopy,
+        sealedJaggedCopy = arrays.sealedJaggedCopy,
         Shape3D = require ( 'Shape3D' );
     
     extend ( Rectangle3D, Shape3D );
     
-    function Rectangle3D ( stroke, fill, strokeweight, radius, position, localEuler, globalEuler, scale ) {
+    function Rectangle3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, radius ) {
         
+        // required by @overrides Shape3D.prototype.update called from Shape3D constructor
         this.radius = radius;
-        this.radiusChanged = true;
         
-        // a sealed copy is provide whose values can be modified
-        // but changing the dimensions of the data will break the
-        // instance if it is not done very carefully and with purpose
-        this.segments = sealedJaggedCopy ( Rectangle3D.prototype.segments );
+        arguments [ arguments.length - 1 ] = sealedJaggedCopy ( this.segments );
         
-        this.setRadius ( radius.top, radius.right, radius.bottom, radius.left );
-        
-        // Shape3D.prototype.update() ( called from Shape3D constructor )
-        // requires this.segments
-        Rectangle3D.prototype._super_.constructor.call (
-            this,
-            new Shape2D ( stroke, fill, strokeweight, scale,  this.segments ),
-            position,
-            localEuler,
-            globalEuler
-        );
+        Rectangle3D.prototype._super_.constructor.apply ( this, arguments );
     }
     
     ( function ( proto ) {
@@ -52,10 +36,7 @@ define ( function ( require, exports, module ) {
         ] );
         
         proto.setRadius = function setRadius ( tl, tr, br, bl ) {
-            var r = this.radius, s = this.shape2D.scale, segs = this.segments,
-                sx = Math.abs ( s.x ), sy = Math.abs ( s.y ),
-                max = 0.5 * Math.min ( sx, sy ),
-                rx, ry, l = arguments.length;
+            var r = this.radius, l = arguments.length;
             
             if ( l === 1 ) {
                 tr = br = bl = tl;
@@ -64,10 +45,22 @@ define ( function ( require, exports, module ) {
                 bl = tr;
             }
             
-            tl = Math.min ( Math.max ( 0, tl ), max );
-            tr = Math.min ( Math.max ( 0, tr ), max );
-            br = Math.min ( Math.max ( 0, br ), max );
-            bl = Math.min ( Math.max ( 0, bl ), max );
+            r.top = tl;
+            r.right = tr;
+            r.bottom = br;
+            r.left = bl;
+        };
+        
+        // @overrides Shape3D.prototype.update
+        proto.update = function () {
+            var r = this.radius, s = this.shape2D.scale, segs = this.segments,
+                sx = Math.abs ( s.x ), sy = Math.abs ( s.y ),
+                max = 0.5 * Math.min ( sx, sy ),
+                rx, ry,
+                tl = Math.min ( Math.max ( 0, r.top ), max ),
+                tr = Math.min ( Math.max ( 0, r.right ), max ),
+                br = Math.min ( Math.max ( 0, r.bottom ), max ),
+                bl = Math.min ( Math.max ( 0, r.left ), max );
             
             if ( max === 0 ) {
                 tl = tr = br = bl = r.top = r.right = r.bottom = r.left = rx = ry = 0;
@@ -121,6 +114,7 @@ define ( function ( require, exports, module ) {
             segs [ 6 ] [ 3 ] = 0.5 - ry * bl;   // +y
             segs [ 7 ] [ 1 ] = ry * bl - 0.5;   // -y
             
+            Shape3D.prototype.update.call ( this );
         };
         
     } ) ( Rectangle3D.prototype );

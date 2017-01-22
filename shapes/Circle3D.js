@@ -1,29 +1,21 @@
 define ( function ( require, exports, module ) {
     
-    var oop = require ( '../oop/opp' ),
-        extend = oop.extend,
-        frozenJaggedCopy = oop.frozenJaggedCopy,
-        Shape2D = require ( 'Shape2D' ),
+    var extend = require ( '../oop/opp' ).extend,
+        arrays = require ( '..oop/arrays' ),
+        frozenJaggedCopy = arrays.frozenJaggedCopy,
         Shape3D = require ( 'Shape3D' ),
-        Vec3D = require ( '../math/Vec3D' ),
         K = require ( '../math/bezier' ).K * 0.5;
     
     extend ( Circle3D, Shape3D );
     
-    function Circle3D ( stroke, fill, strokeweight, diameter, position, localEuler, globalEuler ) {
+    function Circle3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler, radius ) {
         
         // this shape is immutable
-        this.segments = frozenJaggedCopy ( Circle3D.prototype.segments );
+        this.radius = radius;
         
-        // Shape3D.prototype.update() ( called from Shape3D constructor )
-        // requires this.segments
-        Circle3D.prototype._super_.constructor.call (
-            this,
-            new Shape2D ( stroke, fill, strokeweight, new Vec3D ( diameter, diameter, 0 ),  this.segments ),
-            position,
-            localEuler,
-            globalEuler
-        );
+        arguments [ arguments.length - 1 ] = frozenJaggedCopy ( this.segments );
+        
+        Circle3D.prototype._super_.constructor.call ( this, arguments );
     }
     
     ( function ( proto ) {

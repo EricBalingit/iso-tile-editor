@@ -2,26 +2,19 @@ define ( function ( require, exports, module ) {
     
     var oop = require ( '../oop/opp' ),
         extend = oop.extend,
-        frozenJaggedCopy = oop.frozenJaggedCopy,
-        Shape2D = require ( 'Shape2D' ),
+        arrays = require ( '..oop/arrays' ),
+        frozenJaggedCopy = arrays.frozenJaggedCopy,
         Shape3D = require ( 'Shape3D' );
     
     extend ( Square3D, Shape3D );
     
-    function Square3D ( stroke, fill, strokeweight, position, localEuler, globalEuler, scale ) {
+    function Square3D ( stroke, fill, strokeweight, scale, position, localEuler, globalEuler ) {
         
-        // this shape is immutable
-        this.segments = frozenJaggedCopy ( Square3D.prototype.segments );
+        arguments.length = arguments.length + 1;
         
-        // Shape3D.prototype.update() ( called from Shape3D constructor )
-        // requires this.segments
-        Square3D.prototype._super_.constructor.call (
-            this,
-            new Shape2D ( stroke, fill, strokeweight, scale,  this.segments ),
-            position,
-            localEuler,
-            globalEuler
-        );
+        arguments [ arguments.length - 1 ] = frozenJaggedCopy ( this.segments );
+        
+        Square3D.prototype._super_.constructor.call ( this, arguments );
     }
     
     ( function ( proto ) {
