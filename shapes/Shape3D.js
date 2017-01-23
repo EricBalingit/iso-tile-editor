@@ -52,6 +52,8 @@ define ( function ( require, exports, module ) {
         // @override
         proto.segments = [];
         
+        proto.controlIndices = [];
+        
         proto.getBounds = function getBounds () {
             var s = this.shape;
             
@@ -145,41 +147,20 @@ define ( function ( require, exports, module ) {
             global.setMult ( this.localRotation, this.rotation );
         };
         
-        proto.update = function update ( camera ) {
+        proto.update = ( function () {
             
-            var shape2D = this.shape2D, scale = shape2D.scale, segments = shape2D.segments,
-                rotation = this.rotation, clip = this.clip,
-                shape = this.shape, position = this.position,
-                l = segments.length, i, j, t, seg,
-                sx = scale.x, sy = scale.y, // scale.z is never used since shapes are planar
+            var shape2D, scale, segments, position, rotation, clip, shape,
+                l, i, j, t,
+                seg, sl, sx, sy,
                 ax, ay, bx, by, cx, cy, dx, dy, px, py, lx, ly,
-                top = Infinity, right = -Infinity, bottom = -Infinity, left = Infinity,
-                x, y, bounds = this.screenBounds, control = this.controlBounds,
-                controls = this.controls;
-            
-            shape.length = 0;
-            clip.length = 0;
-            
-            p.set ( position );
-            camera.rotate ( p, v );
-            lx = v.x; ly = v.y;
-            
-            // apply the camera rotation to the current rotation
-            
-            // rotation * camera -> r
-            camera.setMult ( rotation, r );
-            
-            for ( i = 0; i < l; i = i + 1 ) {
-                
-                seg = segments [ i ];
-                
-                if ( seg.length === 2 ) {
-                    
-                    ax = px = seg [ 0 ]; ay = py = seg [ 1 ];
-                    p.set ( px, py, 0 );
+                top, right, bottom, left, ctop, cright, cbottom, cleft,
+                x, y, ox, oy, oz,
+                bounds, control, controls,
+                cmap, clen, cindx, pindx,
+                setPoint = function ( px, py ) {
+                    p.set ( px * sx, py * sy, 0 );
                     r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    clip.push ( x, y );
+                    shape.push ( x = v.x + lx, y = v.y + ly );
                     
                     // update bounds
                     if ( y < top ) { top = x; }
@@ -187,123 +168,135 @@ define ( function ( require, exports, module ) {
                     if ( x < left ) { left = x; }
                     if ( x > right ) { right = x; }
                     
-                } else if ( seg.length === 4 ) {
-                    
-                    ax = px;        ay = py;
-                    bx = seg [ 0 ]; by = seg [ 1 ];
-                    cx = seg [ 2 ]; cy = seg [ 3 ];
-                    px = cx;        py = cy;
-                    
-                    p.set ( ax, ay, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + ly, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    p.set ( bx, by, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    p.set ( cx, cy, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    for ( j = 0; j <= 16; j = j + 1 ) {
-                        t = j / 16;
-                        clip.push (
-                            quadraticPoint ( ax, bx, cx, dx, t ),
-                            quadraticPoint ( ay, by, cy, dy, t )
-                        );
+                    // update control points
+                    if ( cindx < clen && cmap [ cindx ] === pindx ) {
+                        rotation.rotate ( p, p );
+                        controls [ cindx ].set ( p.x + ox, p.y + oy, p.z + oz );
+                        cindx = cindx + 1;
                     }
+                    pindx = pindx + 1;
+                };
+            
+            return function update ( camera ) {
+                
+                shape2D = this.shape2D; scale = shape2D.scale; segments = shape2D.segments;
+                rotation = this.rotation; clip = this.clip;
+                shape = this.shape; position = this.position;
+                l = segments.length;
+                sx = scale.x; sy = scale.y; // scale.z is never used since shapes are planar
+                top = Infinity; right = -Infinity; bottom = -Infinity; left = Infinity;
+                bounds = this.screenBounds; control = this.controlBounds;
+                controls = this.controls; cmap = this.controlIndices; clen = controls.length;
+                cindx = 0; pindx = 0;
+                ctop = control.top;
+                cright = control.right;
+                cbottom = control.bottom;
+                cleft = control.left;
+                
+                shape.length = 0;
+                clip.length = 0;
+                
+                ox = position.x;
+                oy = position.y;
+                oz = position.z;
+                
+                p.set ( position );
+                camera.rotate ( p, v );
+                lx = v.x; ly = v.y;
+                
+                // apply the camera rotation to the current rotation
+                
+                // rotation * camera -> r
+                camera.setMult ( rotation, r );
+                
+                for ( i = 0; i < l; i = i + 1 ) {
                     
-                } else {
+                    seg = segments [ i ];
+                    sl = seg.length;
                     
-                    ax = px;        ay = py;
-                    bx = seg [ 0 ]; by = seg [ 1 ];
-                    cx = seg [ 2 ]; cy = seg [ 3 ];
-                    dx = seg [ 4 ]; dy = seg [ 5 ];
-                    px = dx;        py = dy;
-                    
-                    p.set ( ax, ay, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + ly, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    p.set ( bx, by, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    p.set ( cx, cy, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    p.set ( dx, dy, 0 );
-                    r.rotate ( p, v );
-                    shape.push ( x = sx * v.x + lx, y = sy * v.y + ly );
-                    // update bounds
-                    if ( y < top ) { top = x; }
-                    if ( y > bottom ) { bottom = y; }
-                    if ( x < left ) { left = x; }
-                    if ( x > right ) { right = x; }
-                    
-                    for ( j = 0; j <= 16; j = j + 1 ) {
-                        t = j / 16;
-                        clip.push (
-                            cubicPoint ( ax, bx, cx, dx, t ),
-                            cubicPoint ( ay, by, cy, dy, t )
-                        );
+                    if ( sl === 2 ) {
+                        
+                        ax = seg [ 0 ]; ay = seg [ 1 ];
+                        setPoint ( ax, ay );
+                        clip.push ( x, y );
+                        px = x; py = y;
+                        
+                    } else if ( sl === 4 ) {
+                        
+                        ax = px;        ay = py;
+                        bx = seg [ 0 ]; by = seg [ 1 ];
+                        cx = seg [ 2 ]; cy = seg [ 3 ];
+                        
+                        setPoint ( bx, by );
+                        bx = x; by = y;
+                        
+                        setPoint ( cx, cy );
+                        px = cx = x; py = cy = y;
+                        
+                        for ( j = 1; j < 16; j = j + 1 ) {
+                            t = j / 16;
+                            clip.push (
+                                quadraticPoint ( ax, bx, cx, t ),
+                                quadraticPoint ( ay, by, cy, t )
+                            );
+                        }
+                        
+                        clip.push ( cx, cy );
+                        
+                    } else if ( sl === 6 ){
+                        
+                        ax = px;        ay = py;
+                        bx = seg [ 0 ]; by = seg [ 1 ];
+                        cx = seg [ 2 ]; cy = seg [ 3 ];
+                        dx = seg [ 4 ]; dy = seg [ 5 ];
+                        
+                        setPoint ( bx, by );
+                        bx = x; by = y;
+                        
+                        setPoint ( cx, cy );
+                        cx = x; cy = y;
+                        
+                        setPoint ( dx, dy );
+                        px = dx = x; py = dy = y;
+                        
+                        for ( j = 1; j < 16; j = j + 1 ) {
+                            t = j / 16;
+                            clip.push (
+                                cubicPoint ( ax, bx, cx, dx, t ),
+                                cubicPoint ( ay, by, cy, dx, t )
+                            );
+                        }
+                        
+                        clip.push ( dx, dy );
+                    } else {
+                        throw new TypeError ( 'cannot convert segment with length ' + ( sl >> 1 ) );
                     }
                 }
-            }
-            
-            // update the screen bounds
-            bounds.top = top;
-            bounds.right = right;
-            bounds.bottom = bottom;
-            bounds.left = left;
-            
-            top = control.top;
-            right = control.right;
-            bottom = control.bottom;
-            left = control.left;
-            
-            top.set     ( 0,            0.5 * sy,       0 );
-            right.set   ( 0.5 * sx,     0,              0 );
-            bottom.set  ( 0,            -0.5 * sy,      0 );
-            left.set    ( -0.5 * sx,    0,              0 );
-            
-            rotation.rotate ( top, top );
-            rotation.rotate ( right, right );
-            rotation.rotate ( bottom, bottom );
-            rotation.rotate ( left, left );
-        };
+                
+                // update the screen bounds
+                bounds.top = top;
+                bounds.right = right;
+                bounds.bottom = bottom;
+                bounds.left = left;
+                
+                
+                // the 3D bounds of the shape are computed
+                // by scaling the orthogonal vectors of the
+                // rotation matrix, this is a bit cheaper
+                // than rotating each one, 12 mults vs 36
+                sx = 0.5 * sx;
+                sy = 0.5 * sy;
+                ctop.set     ( rotation.ny );
+                cright.set   ( rotation.nx );
+                cbottom.set  ( rotation.ny );
+                cleft.set    ( rotation.nx );
+                ctop.mult ( sy );
+                cright.mult ( sx );
+                cbottom.mult ( -sy );
+                cleft.mult ( -sx );
+                
+            };
+        } ) ();
         
         // @mustoverride
         proto.onselect = function onselect ( editor ) {};
